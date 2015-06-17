@@ -1,3 +1,10 @@
+/****
+*
+* Initial game : http://cssdeck.com/labs/ping-pong-game-tutorial-with-html5-canvas-and-sounds
+*
+*****/
+
+
 // RequestAnimFrame: a browser API for getting smooth animations
 window.requestAnimFrame = (function(){
 	return  window.requestAnimationFrame       || 
@@ -19,7 +26,6 @@ window.cancelRequestAnimFrame = ( function() {
 		clearTimeout
 } )();
 
-
 // Initialize canvas and required variables
 var canvas = document.getElementById("canvas"),
 		ctx = canvas.getContext("2d"), // Create canvas context
@@ -29,7 +35,7 @@ var canvas = document.getElementById("canvas"),
 		ball = {}, // Ball object
 		paddles = [2], // Array containing two paddles
 		leap_hands = [2], // Object to store it's current position
-		points = 0, // Varialbe to store points
+		points = [2], // Varialbe to store points
 		fps = 60, // Max FPS (frames per second)
 		particlesCount = 20, // Number of sparks when ball strikes the paddle
 		flag = 0, // Flag variable which is changed on collision
@@ -39,7 +45,9 @@ var canvas = document.getElementById("canvas"),
 		restartBtn = {}, // Restart button object
 		over = 0, // flag varialbe, cahnged when the game is over
 		init, // variable to initialize animation
-		paddleHit;
+		paddleHit,
+		MAX_POINTS = 5, // score needed to win the game
+		DEBUG = false; // debug mode for tests
 
 // Add mousemove and mousedown events to the canvas
 //canvas.addEventListener("mousemove", trackPosition, true);
@@ -114,6 +122,8 @@ startBtn = {
 		ctx.textAlign = "center";
 		ctx.textBaseline = "middle";
 		ctx.fillStlye = "white";
+
+		ctx.fillText("Tap to start", W/2, H/2 - 40);
 		ctx.fillText("Start", W/2, H/2 );
 	}
 };
@@ -130,13 +140,16 @@ restartBtn = {
 		ctx.lineWidth = "2";
 		ctx.strokeRect(this.x, this.y, this.w, this.h);
 		
-		ctx.font = "18px Arial, sans-serif";
+		ctx.font = "20px Arial, sans-serif";
 		ctx.textAlign = "center";
 		ctx.textBaseline = "middle";
 		ctx.fillStlye = "white";
-		ctx.fillText("Restart", W/2, H/2 - 25 );
+		ctx.fillText("Continue", W/2, H/2 - 25 );
 	}
 };
+
+points[0] = 0;
+points[1] = 0;
 
 // Function for creating particles object
 function createParticles(x, y, m) {
@@ -165,10 +178,10 @@ function draw() {
 
 // Function to increase speed after every 5 points
 function increaseSpd() {
-	if(points % 4 == 0) {
+	if(points[0] % 4 == 0 || points[1] % 4 == 0) {
 		if(Math.abs(ball.vx) < 15) {
-			ball.vx += (ball.vx < 0) ? -1 : 1;
-			ball.vy += (ball.vy < 0) ? -2 : 2;
+			ball.vx += (ball.vx < 0) ? -0.5 : 0.5;
+			ball.vy += (ball.vy < 0) ? -1 : 1;
 		}
 	}
 }
@@ -176,9 +189,6 @@ function increaseSpd() {
 // Function to update positions, score and everything.
 // Basically, the main game logic is defined here
 function update() {
-	
-	// Update scores
-	updateScore(); 
 	
 	// Move the paddles on hands move
 	if(leap_hands[0].x && leap_hands[1].x) {
@@ -220,15 +230,17 @@ function update() {
 	
 	else {
 		// Collide with walls, If the ball hits the top/bottom,
-		// walls, run gameOver() function
+		// walls, run pauseGame() function
 		if(ball.y + ball.r > H) {
 			ball.y = H - ball.r;
-			gameOver();
+			points[0]++;
+			pauseGame();
 		} 
 		
 		else if(ball.y < 0) {
 			ball.y = ball.r;
-			gameOver();
+			points[1]++;
+			pauseGame();
 		}
 		
 		// If ball strikes the vertical walls, invert the 
@@ -244,8 +256,6 @@ function update() {
 		}
 	}
 	
-	
-	
 	// If flag is set, push the particles
 	if(flag == 1) { 
 		for(var k = 0; k < particlesCount; k++) {
@@ -255,6 +265,9 @@ function update() {
 	
 	// Emit particles/sparks
 	emitParticles();
+
+	// Update scores
+	updateScore(); 
 	
 	// reset flag
 	flag = 0;
@@ -299,11 +312,11 @@ function collideAction(ball, p) {
 		multiplier = 1;	
 	}
 	
-	points++;
+	//points[1]++;
 	increaseSpd();
 	
 	if(collision) {
-		if(points > 0) 
+		if(points[0] > 0) 
 			collision.pause();
 		
 		collision.currentTime = 0;
@@ -341,25 +354,38 @@ function updateScore() {
 	ctx.font = "16px Arial, sans-serif";
 	ctx.textAlign = "left";
 	ctx.textBaseline = "top";
-	ctx.fillText("Score: " + points, 20, 20 );
+	ctx.fillText("Score : " + points[0] + " - " + points[1], 20, 20 );
 }
 
 // Function to run when the game overs
-function gameOver() {
+function pauseGame() {
 	ctx.fillStlye = "white";
-	ctx.font = "20px Arial, sans-serif";
+	ctx.font = "25px Arial, sans-serif";
 	ctx.textAlign = "center";
-	ctx.textBaseline = "middle";
-	ctx.fillText("Game Over - You scored "+points+" points!", W/2, H/2 + 25 );
-	
+	ctx.textBaseline = "middle"; 
+
+	if(points[0] >= MAX_POINTS || points[1] >= MAX_POINTS){
+
+		ctx.fillText("Swipe to restart", W/2, H/2 - 25);
+		ctx.fillText("Score : " + points[0] + " - " + points[1], W/2, H/2 + 25 );
+
+		// Set the over flag : ended
+		over = 2;
+
+	}else{
+		ctx.fillText("Tap to continue", W/2, H/2 - 80);
+		ctx.fillText("Current score : " + points[0] + " - " + points[1], W/2, H/2 + 25 );	
+
+		// Show the restart button
+		restartBtn.draw();
+
+		// Set the over flag : paused
+		over = 1;
+
+	}
+
 	// Stop the Animation
 	cancelRequestAnimFrame(init);
-	
-	// Set the over flag
-	over = 1;
-	
-	// Show the restart button
-	restartBtn.draw();
 }
 
 // Function for running the whole animation
@@ -394,7 +420,7 @@ function btnClick(e) {
 		if(mx >= restartBtn.x && mx <= restartBtn.x + restartBtn.w) {
 			ball.x = 20;
 			ball.y = 20;
-			points = 0;
+			
 			ball.vx = 4;
 			ball.vy = 8;
 			animloop();
@@ -423,31 +449,46 @@ Leap.loop({enableGestures: true}, function(frame) {
 	frame.hands.forEach(function(hand, index) {
 
 		// Decrease the paddle's X position from the velocity of the hand
-		leap_hands[index].x -= hand.palmVelocity[1]*0.5;
+		leap_hands[index].x -= hand.palmVelocity[1]*0.15;
 
 		// Restart the game by "tapping"
 		if(frame.valid && frame.gestures.length > 0){
+
 			if(frame.gestures[0].type == "keyTap"){
 				// over : status of the game
+
+				if(DEBUG){ console.log("keyTap"); }
+
+				// If game paused
 				if(over == 1){
+
 					ball.x = 20;
 					ball.y = 20;
-					points = 0;
+
 					ball.vx = 4;
 					ball.vy = 8;
 					animloop();
 
-					/*for(var i = 0; i < paddles.length; i++) {
-						paddle[i].x = W/2 - paddle[i].w/2;
-						paddle[i].y = (paddle[i].pos == "top") ? 0 : H - paddle[i].h;
-					}*/
-					
-					
 					over = 0;
+
+				}else{ // Game ready to start
+
+					btnClick({pageX: W/2, pageY: H/2});
+
 				}
 			}
-		}
 
+			if(frame.gestures[0].type == "swipe"){
+
+				if(DEBUG){ console.log("swipe"); }
+
+				if(over == 2){
+					location.reload();
+				}
+			
+			}
+
+		}
 
   });
 
